@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#020208">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Stereo Logic">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Stereo Logic">
+    <meta name="description" content="Stereo Logic – RGB Audio Engine. A premium mobile music player with parametric EQ and RGB speaker lighting.">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Apple Touch Icons (use your own 512x512 icon, these point to manifest icons) -->
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+
+    <title>Stereo Logic | RGB Audio Engine</title>
+
+    <!-- ID3 tag reader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Premium Dark Background (no canvas, CSS only) -->
+<div id="bg-layer">
+    <div class="bg-glow bg-glow-l"></div>
+    <div class="bg-glow bg-glow-r"></div>
+</div>
+
+<!-- Boot Screen -->
+<div id="boot">
+    <div class="boot-logo">STEREO LOGIC</div>
+    <div class="boot-sub">RGB Audio Engine</div>
+    <div class="boot-line"></div>
+    <button id="start-btn" onclick="boot()">Initialize Engine</button>
+</div>
+
+<!-- ══════════════════════════════════
+     APP SHELL (hidden until booted)
+══════════════════════════════════ -->
+<div id="app" class="hidden">
+
+    <!-- Speaker Rig -->
+    <div class="rig" id="speaker-rig">
+        <div class="speaker">
+            <div class="orbit-container" id="orbit-l">
+                <svg class="orbit-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                    <circle id="strip-l" cx="50" cy="50" r="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div class="housing">
+                <div class="housing-ring"></div>
+                <div class="housing-ring" style="width:78%;height:78%"></div>
+            </div>
+            <div class="cone"></div>
+            <div class="cone-inner"></div>
+            <div class="cap" id="cap-l"><div class="cap-dot"></div></div>
+        </div>
+        <div class="speaker">
+            <div class="orbit-container" id="orbit-r">
+                <svg class="orbit-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                    <circle id="strip-r" cx="50" cy="50" r="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div class="housing">
+                <div class="housing-ring"></div>
+                <div class="housing-ring" style="width:78%;height:78%"></div>
+            </div>
+            <div class="cone"></div>
+            <div class="cone-inner"></div>
+            <div class="cap" id="cap-r"><div class="cap-dot"></div></div>
+        </div>
+    </div>
+
+    <!-- Main Deck Card -->
+    <div class="deck glass-panel" id="main-deck">
+
+        <!-- Track Info Row -->
+        <div class="track-module">
+            <div class="album-art-wrap" id="art-wrap">
+                <img id="cover-art" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Crect width='80' height='80' fill='%230a0a12'/%3E%3Ccircle cx='40' cy='40' r='18' fill='none' stroke='%23222233' stroke-width='1.5'/%3E%3Ccircle cx='40' cy='40' r='5' fill='%23222233'/%3E%3C/svg%3E" alt="Cover Art">
+                <div class="art-overlay"></div>
+            </div>
+            <div class="track-info">
+                <h3 id="track-title">NO SIGNAL</h3>
+                <p id="track-artist">Awaiting Input</p>
+                <div class="badges">
+                    <span class="badge" id="badge-fmt">—</span>
+                    <span class="badge" id="badge-hz">—</span>
+                    <span class="badge badge-counter" id="pl-counter">0/0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-row">
+            <span class="time" id="t-cur">0:00</span>
+            <div class="progress-track" id="prog-track">
+                <div class="progress-glow"></div>
+                <div id="pbar"></div>
+            </div>
+            <span class="time" id="t-tot">0:00</span>
+        </div>
+
+        <!-- Transport Controls -->
+        <div class="transport">
+            <button class="tbtn" id="shuf-btn" title="Shuffle" onclick="toggleShuffle()">
+                <svg viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+            </button>
+            <button class="tbtn" title="Previous" onclick="prevTrack()">
+                <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+            </button>
+            <button id="play-btn" title="Play/Pause" onclick="togglePlay()">
+                <div class="play-ring"></div>
+                <svg id="play-icon" viewBox="0 0 24 24"><path id="play-path" d="M8 5v14l11-7z"/></svg>
+            </button>
+            <button class="tbtn" title="Next" onclick="nextTrack()">
+                <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zm10-12v12h2V6h-2z"/></svg>
+            </button>
+            <button class="tbtn" id="rep-btn" title="Repeat" onclick="toggleRepeat()">
+                <svg id="rep-icon" viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+            </button>
+        </div>
+
+        <!-- Volume & Speed Row -->
+        <div class="sec-row">
+            <div class="slider-group">
+                <span class="icon-lbl">
+                    <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+                </span>
+                <input type="range" id="vol" min="0" max="1" step="0.01" value="0.8">
+            </div>
+            <div class="slider-group">
+                <span class="icon-lbl mono-lbl">SPD</span>
+                <input type="range" id="spd-slider" min="0.5" max="2" step="0.05" value="1">
+                <span class="icon-lbl mono-lbl" id="spd-val">1.0×</span>
+            </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <!-- Action Buttons -->
+        <div class="act-row">
+            <!-- Primary upload button — large & prominent on mobile -->
+            <label class="abtn abtn-upload" for="file-in" title="Load Audio">
+                <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+                <span>Select Audio</span>
+            </label>
+            <input type="file" id="file-in" accept="audio/*" multiple>
+
+            <button class="abtn" id="pl-btn" onclick="togglePanel('pl-panel', 'pl-btn')">
+                <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+                <span>Queue</span>
+            </button>
+
+            <button class="abtn" id="eq-btn" onclick="togglePanel('eq-panel', 'eq-btn')">
+                <svg viewBox="0 0 24 24"><path d="M10 8H8V5H6v3H4v2h6V8zm-2 9h2v-3h4v3h2V5h-2v7h-4V5h-2v12zm8-5h2v8h-2v-8zm0-7h2v2h-2V5z"/></svg>
+                <span>EQ</span>
+            </button>
+
+            <button class="abtn" id="set-btn" onclick="togglePanel('settings-panel', 'set-btn')">
+                <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                <span>Config</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- EQ Panel (bottom sheet on mobile) -->
+    <div id="eq-panel" class="panel sheet">
+        <div class="sheet-handle"></div>
+        <div class="panel-head">
+            <span class="panel-title">Parametric EQ</span>
+            <button class="tbtn panel-close" onclick="togglePanel('eq-panel', 'eq-btn')">✕</button>
+        </div>
+        <div class="eq-presets">
+            <button class="prbtn on" data-preset="flat">Flat</button>
+            <button class="prbtn" data-preset="bass">Bass</button>
+            <button class="prbtn" data-preset="edm">EDM</button>
+            <button class="prbtn" data-preset="rock">Rock</button>
+            <button class="prbtn" data-preset="vocal">Vocal</button>
+            <button class="prbtn" data-preset="cinema">Cinema</button>
+            <button class="prbtn" data-preset="phonk">Phonk</button>
+            <button class="prbtn" onclick="resetEQ()">Reset</button>
+        </div>
+        <div class="eq-bands-wrapper">
+            <div class="eq-bands" id="eq-bands"></div>
+        </div>
+        <canvas id="eq-curve"></canvas>
+    </div>
+
+    <!-- Queue Panel (bottom sheet on mobile) -->
+    <div id="pl-panel" class="panel sheet">
+        <div class="sheet-handle"></div>
+        <div class="panel-head">
+            <span class="panel-title">Queue</span>
+            <button class="tbtn panel-close" onclick="togglePanel('pl-panel', 'pl-btn')">✕</button>
+        </div>
+        <div class="pl-actions">
+            <label for="file-in2">+ Add Files</label>
+            <input type="file" id="file-in2" accept="audio/*" multiple>
+            <button onclick="clearQueue()">Clear All</button>
+        </div>
+        <div id="pl-list"></div>
+    </div>
+
+    <!-- Settings Panel (center modal) -->
+    <div id="settings-panel" class="glass-panel panel-center">
+        <div class="panel-head">
+            <span class="panel-title">System Config</span>
+            <button class="tbtn panel-close" onclick="togglePanel('settings-panel', 'set-btn')">✕</button>
+        </div>
+        <div class="set-row">
+            <span class="set-lbl">RGB Logic</span>
+            <select class="set-sel" id="sel-rgb">
+                <option value="stereo">True Stereo</option>
+                <option value="flow">Rainbow Flow</option>
+                <option value="pulse">Bass Pulse</option>
+            </select>
+        </div>
+        <div class="set-divider"></div>
+        <button class="abtn danger-btn" onclick="factoryReset()">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            <span>Factory Reset Memory</span>
+        </button>
+    </div>
+
+    <!-- Panel backdrop -->
+    <div id="panel-backdrop" onclick="closeAllPanels()"></div>
+
+</div><!-- /#app -->
+
+<audio id="engine" preload="auto"></audio>
+
+<script src="script.js"></script>
+</body>
+</html>
