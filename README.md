@@ -32,11 +32,3 @@ Designed with an Apple × Rolls-Royce × Deep Space aesthetic.
 - Service Workers
 - PWA Manifest
 
----
-
-## 📦 Installation
-
-Clone the repository:
-
-```bash
-git clone https://github.com/yourusername/stereologic.git
